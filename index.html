@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, env(safe-area-inset-top), env(safe-area-inset-bottom)">
     <title>Music Play</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1e1e1e">
+    <meta name="theme-color" content="#121212">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Music Play">
@@ -364,7 +364,7 @@
         let db;
         let oldObjectURL = null;
 
-        const dbRequest = indexedDB.open("MusicPlayDB", 1);
+        const dbRequest = indexedDB.open("MusicPlayPWA", 1);
 
         dbRequest.onupgradeneeded = (e) => {
             db = e.target.result;
@@ -385,7 +385,18 @@
             
             clearRequest.onsuccess = () => {
                 files.forEach((file) => {
-                    store.add({ name: file.name, file: file });
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const buffer = event.target.result;
+                        const dataToSave = {
+                            name: file.name,
+                            type: file.type,
+                            buffer: buffer
+                        };
+                        const addTx = db.transaction(["tracks"], "readwrite");
+                        addTx.objectStore("tracks").add(dataToSave);
+                    };
+                    reader.readAsArrayBuffer(file);
                 });
             };
         }
@@ -399,9 +410,9 @@
                 const records = getAllRequest.result;
                 if (records && records.length > 0) {
                     songs = records.map(r => {
-                        const fileBlob = r.file;
-                        fileBlob.name = r.name;
-                        return fileBlob;
+                        const blob = new Blob([r.buffer], { type: r.type || 'audio/mp3' });
+                        blob.name = r.name;
+                        return blob;
                     });
                     songs.sort((a, b) => a.name.localeCompare(b.name));
                     renderPlaylist();
@@ -420,7 +431,7 @@
 
         dirInput.addEventListener('change', (e) => {
             const files = Array.from(e.target.files);
-            const filtered = files.filter(file => file.type.startsWith('audio/') || file.name.endsWith('.mp3') || file.name.endsWith('.wav') || file.name.endsWith('.m4a'));
+            const filtered = files.filter(file => file.type.startsWith('audio/') || file.name.endsWith('.mp3') || file.name.endsWith('.wav') || file.name.endsWith('.m4a') || file.name.endsWith('.ogg'));
             
             if (filtered.length > 0) {
                 songs = filtered;
@@ -453,7 +464,7 @@
                 navigator.mediaSession.metadata = new MediaMetadata({
                     title: trackName,
                     artist: 'Music Play',
-                    album: 'Arquivos Locais'
+                    album: 'Biblioteca Local'
                 });
                 navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
             }
