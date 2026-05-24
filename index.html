@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, env(safe-area-inset-top), env(safe-area-inset-bottom)">
     <title>Music Play</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1e1e1e">
+    <meta name="theme-color" content="#ffa500">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Music Play">
@@ -325,7 +325,7 @@
         <h2 class="credits-header">Made By: @085_Teuzinnn</h2>
     </div>
 
-    <audio id="audio-element"></audio>
+    <audio id="audio-element" preload="auto"></audio>
 
     <script>
         if ('serviceWorker' in navigator) {
@@ -362,6 +362,7 @@
         let isShuffle = false;
         let loopMode = 0; 
         let db;
+        let oldObjectURL = null;
 
         const dbRequest = indexedDB.open("MusicPlayDB", 1);
 
@@ -380,7 +381,6 @@
         function saveSongsToStorage(files) {
             const transaction = db.transaction(["tracks"], "readwrite");
             const store = transaction.objectStore("tracks");
-            
             const clearRequest = store.clear();
             
             clearRequest.onsuccess = () => {
@@ -452,9 +452,10 @@
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({
                     title: trackName,
-                    artist: '',
-                    album: ''
+                    artist: 'Music Play',
+                    album: 'Arquivos Locais'
                 });
+                navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
             }
         }
 
@@ -464,8 +465,14 @@
             currentTrackIndex = index;
             const song = songs[index];
             
+            if (oldObjectURL) {
+                URL.revokeObjectURL(oldObjectURL);
+            }
+            
             const objectURL = URL.createObjectURL(song);
+            oldObjectURL = objectURL;
             audio.src = objectURL;
+            audio.load();
             
             const cleanName = song.name.replace(/\.[^/.]+$/, "");
             displayTitle.textContent = cleanName;
@@ -486,10 +493,12 @@
 
         function playTrack() {
             if (songs.length === 0) return;
-            audio.play();
-            isPlaying = true;
-            playBtn.textContent = '⏸️';
-            discIcon.style.animation = 'spin 4s linear infinite';
+            audio.play().then(() => {
+                isPlaying = true;
+                playBtn.textContent = '⏸️';
+                discIcon.style.animation = 'spin 4s linear infinite';
+                updateSystemMedia(displayTitle.textContent);
+            }).catch(() => {});
         }
 
         function pauseTrack() {
@@ -497,6 +506,7 @@
             isPlaying = false;
             playBtn.textContent = '▶️';
             discIcon.style.animation = 'none';
+            updateSystemMedia(displayTitle.textContent);
         }
 
         playBtn.addEventListener('click', () => {
