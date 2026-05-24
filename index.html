@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, env(safe-area-inset-top), env(safe-area-inset-bottom)">
-    <title>Music Play</title>
+    <title>Music Play - Made By: @085_Teuzinnn</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#121212">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -325,7 +325,7 @@
         <h2 class="credits-header">Made By: @085_Teuzinnn</h2>
     </div>
 
-    <audio id="audio-element" preload="auto"></audio>
+    <audio id="audio-element"></audio>
 
     <script>
         if ('serviceWorker' in navigator) {
@@ -361,65 +361,6 @@
         let isPlaying = false;
         let isShuffle = false;
         let loopMode = 0; 
-        let db;
-        let oldObjectURL = null;
-
-        const dbRequest = indexedDB.open("MusicPlayPWA", 1);
-
-        dbRequest.onupgradeneeded = (e) => {
-            db = e.target.result;
-            if (!db.objectStoreNames.contains("tracks")) {
-                db.objectStoreNames.createObjectStore("tracks", { keyPath: "id", autoIncrement: true });
-            }
-        };
-
-        dbRequest.onsuccess = (e) => {
-            db = e.target.result;
-            loadSongsFromStorage();
-        };
-
-        function saveSongsToStorage(files) {
-            const transaction = db.transaction(["tracks"], "readwrite");
-            const store = transaction.objectStore("tracks");
-            const clearRequest = store.clear();
-            
-            clearRequest.onsuccess = () => {
-                files.forEach((file) => {
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        const buffer = event.target.result;
-                        const dataToSave = {
-                            name: file.name,
-                            type: file.type,
-                            buffer: buffer
-                        };
-                        const addTx = db.transaction(["tracks"], "readwrite");
-                        addTx.objectStore("tracks").add(dataToSave);
-                    };
-                    reader.readAsArrayBuffer(file);
-                });
-            };
-        }
-
-        function loadSongsFromStorage() {
-            const transaction = db.transaction(["tracks"], "readonly");
-            const store = transaction.objectStore("tracks");
-            const getAllRequest = store.getAll();
-
-            getAllRequest.onsuccess = () => {
-                const records = getAllRequest.result;
-                if (records && records.length > 0) {
-                    songs = records.map(r => {
-                        const blob = new Blob([r.buffer], { type: r.type || 'audio/mp3' });
-                        blob.name = r.name;
-                        return blob;
-                    });
-                    songs.sort((a, b) => a.name.localeCompare(b.name));
-                    renderPlaylist();
-                    loadTrack(0);
-                }
-            };
-        }
 
         function toggleSidebar() {
             sidebar.classList.toggle('open');
@@ -431,12 +372,10 @@
 
         dirInput.addEventListener('change', (e) => {
             const files = Array.from(e.target.files);
-            const filtered = files.filter(file => file.type.startsWith('audio/') || file.name.endsWith('.mp3') || file.name.endsWith('.wav') || file.name.endsWith('.m4a') || file.name.endsWith('.ogg'));
+            songs = files.filter(file => file.type.startsWith('audio/') || file.name.endsWith('.mp3') || file.name.endsWith('.wav') || file.name.endsWith('.m4a'));
             
-            if (filtered.length > 0) {
-                songs = filtered;
+            if (songs.length > 0) {
                 songs.sort((a, b) => a.name.localeCompare(b.name));
-                saveSongsToStorage(songs);
                 renderPlaylist();
                 loadTrack(0);
                 toggleSidebar();
@@ -463,10 +402,9 @@
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({
                     title: trackName,
-                    artist: 'Music Play',
-                    album: 'Biblioteca Local'
+                    artist: '',
+                    album: ''
                 });
-                navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
             }
         }
 
@@ -476,14 +414,8 @@
             currentTrackIndex = index;
             const song = songs[index];
             
-            if (oldObjectURL) {
-                URL.revokeObjectURL(oldObjectURL);
-            }
-            
             const objectURL = URL.createObjectURL(song);
-            oldObjectURL = objectURL;
             audio.src = objectURL;
-            audio.load();
             
             const cleanName = song.name.replace(/\.[^/.]+$/, "");
             displayTitle.textContent = cleanName;
@@ -504,12 +436,10 @@
 
         function playTrack() {
             if (songs.length === 0) return;
-            audio.play().then(() => {
-                isPlaying = true;
-                playBtn.textContent = '⏸️';
-                discIcon.style.animation = 'spin 4s linear infinite';
-                updateSystemMedia(displayTitle.textContent);
-            }).catch(() => {});
+            audio.play();
+            isPlaying = true;
+            playBtn.textContent = '⏸️';
+            discIcon.style.animation = 'spin 4s linear infinite';
         }
 
         function pauseTrack() {
@@ -517,7 +447,6 @@
             isPlaying = false;
             playBtn.textContent = '▶️';
             discIcon.style.animation = 'none';
-            updateSystemMedia(displayTitle.textContent);
         }
 
         playBtn.addEventListener('click', () => {
