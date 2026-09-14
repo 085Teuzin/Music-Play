@@ -1,1386 +1,833 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🎮 UNO Multiplayer 🕹 - Player 1 & Player 2</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-        :root {
-            --bg-body: #090a0f;
-            --bg-card: #12151e;
-            --bg-glass: rgba(18, 21, 30, 0.75);
-            --text-main: #e2e8f0;
-            --text-muted: #94a3b8;
-            --color-teuzin: #ff6b4a;
-            --color-niella: #3da5ff;
-            --correct: #00e676;
-            --wrong: #ff1744;
-            --border: rgba(255, 255, 255, 0.08);
-            --border-glow: rgba(255, 255, 255, 0.15);
-            --accent-glow: rgba(0, 210, 255, 0.15);
-        }
-        body, html {
-            width: 100%;
-            height: 100%;
-            background-color: var(--bg-body);
-            background-image: 
-                radial-gradient(circle at 15% 15%, rgba(255, 107, 74, 0.08) 0%, transparent 40%),
-                radial-gradient(circle at 85% 85%, rgba(61, 165, 255, 0.08) 0%, transparent 40%);
-            color: var(--text-main);
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            touch-action: manipulation;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Private Stream - Deluxe Edition</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#050507">
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-        #header-bar {
-            width: 100%;
-            min-height: 56px;
-            max-height: 56px;
-            flex-shrink: 0;
-            background: var(--bg-glass);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 16px;
-            z-index: 10;
-        }
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .logo-title {
-            font-size: clamp(15px, 4.5vw, 18px);
-            font-weight: 900;
-            background: linear-gradient(135deg, var(--color-teuzin), var(--color-niella));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: 0.5px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            text-transform: uppercase;
-        }
-        .header-btn {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            font-size: 15px;
-            width: 38px;
-            height: 38px;
-            border-radius: 12px;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            outline: none;
-            flex-shrink: 0;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .header-btn:active {
-            transform: scale(0.92);
-            background: rgba(255, 255, 255, 0.08);
-        }
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      background-color: #050507;
+      color: #e3e3e3;
+      overflow: hidden;
+    }
 
-        #game-stats {
-            width: 100%;
-            flex-shrink: 0;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            background: rgba(18, 21, 30, 0.4);
-            border-bottom: 1px solid var(--border);
-            padding: 10px 14px;
-            text-align: center;
-            gap: 12px;
-        }
-        .player-stat-box {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: 3px;
-            padding: 8px 12px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 12px;
-            min-width: 0;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid transparent;
-        }
-        #box-p1 .stat-label { color: var(--color-teuzin); }
-        #box-p2 .stat-label { color: var(--color-niella); }
-        
-        #box-p1.active-turn {
-            background: rgba(255, 107, 74, 0.1);
-            border-color: rgba(255, 107, 74, 0.3);
-            box-shadow: 0 4px 20px rgba(255, 107, 74, 0.15);
-        }
-        #box-p2.active-turn {
-            background: rgba(61, 165, 255, 0.1);
-            border-color: rgba(61, 165, 255, 0.3);
-            box-shadow: 0 4px 20px rgba(61, 165, 255, 0.15);
-        }
-        .stat-label {
-            font-size: clamp(13px, 3.8vw, 15px);
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .stat-meta {
-            font-size: clamp(11px, 3.2vw, 13px);
-            color: var(--text-muted);
-            font-weight: 600;
-        }
+    .app-viewport {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      background-color: #050507;
+      position: relative;
+      overflow: hidden;
+    }
 
-        #game-container {
-            flex: 1;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 14px;
-            overflow: hidden;
-            position: relative;
-            min-height: 0;
-        }
+    .media-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: #000;
+      position: relative;
+      min-height: 0;
+      width: 100%;
+    }
 
-        #setup-screen {
-            width: 100%;
-            max-width: 380px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-glow);
-            border-radius: 20px;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(10px);
-            position: relative;
-        }
-        #setup-screen::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; height: 3px;
-            background: linear-gradient(90deg, var(--color-teuzin), var(--color-niella));
-            border-radius: 20px 20px 0 0;
-        }
-        .lobby-buttons-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
-            width: 100%;
-        }
-        .btn-primary {
-            border: none;
-            color: #fff;
-            padding: 16px;
-            border-radius: 14px;
-            font-weight: 800;
-            font-size: clamp(13px, 3.8vw, 15px);
-            cursor: pointer;
-            outline: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            letter-spacing: 0.5px;
-        }
-        .btn-primary:active { transform: scale(0.96); }
-        #btn-join-p1 { 
-            background: linear-gradient(135deg, #ff6b4a, #ff8c52);
-            box-shadow: 0 6px 20px rgba(255, 107, 74, 0.25);
-        }
-        #btn-join-p2 { 
-            background: linear-gradient(135deg, #3da5ff, #0088ff);
-            box-shadow: 0 6px 20px rgba(61, 165, 255, 0.25);
-        }
+    .stage {
+      flex: 1;
+      background-color: #000;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 0;
+      background: radial-gradient(circle at center, #0f1015 0%, #000 100%);
+    }
 
-        #game-screen {
-            width: 100%;
-            max-width: 500px;
-            height: 100%;
-            display: none;
-            flex-direction: column;
-            gap: 10px;
-            align-items: center;
-            justify-content: space-between;
-            position: relative;
-            min-height: 0;
-        }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background-color: #000;
+    }
 
-        #turn-bar {
-            text-align: center;
-            font-size: clamp(12px, 3.5vw, 14px);
-            font-weight: 700;
-            color: var(--text-main);
-            padding: 6px 16px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            flex-shrink: 0;
-            letter-spacing: 0.3px;
-        }
+    .stage-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      color: #5a5e65;
+      padding: 20px;
+      text-align: center;
+    }
 
-        #table-board {
-            flex: 1;
-            width: 100%;
-            height: 100%;
-            background: rgba(18, 21, 30, 0.5);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 0;
-            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(8px);
-        }
+    .stage-placeholder svg {
+      width: 64px;
+      height: 64px;
+      fill: #ff4500;
+      filter: drop-shadow(0 0 12px rgba(255, 69, 0, 0.6));
+    }
 
-        .modal-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(9, 10, 15, 0.88);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: 24px;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            z-index: 500;
-            animation: fadeInModal 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
+    .deluxe-badge {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #ffd700;
+      border: 1px solid rgba(255, 215, 0, 0.4);
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: rgba(255, 215, 0, 0.05);
+    }
 
-        @keyframes fadeInModal {
-            from { opacity: 0; transform: scale(0.92); }
-            to { opacity: 1; transform: scale(1); }
-        }
+    .author-tag {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #ff5722;
+      letter-spacing: 0.5px;
+      padding: 6px 0;
+      background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(18,19,22,1) 100%);
+      border-top: 1px solid rgba(255, 69, 0, 0.15);
+      flex-shrink: 0;
+      text-transform: none;
+    }
 
-        .win-card {
-            width: 100%;
-            max-width: 320px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-glow);
-            border-radius: 24px;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 18px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
+    .controls-dock {
+      height: 64px;
+      height: calc(64px + env(safe-area-inset-bottom, 0px));
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      display: flex;
+      align-items: center;
+      justify-content: space-evenly;
+      padding-left: max(8px, env(safe-area-inset-left));
+      padding-right: max(8px, env(safe-area-inset-right));
+      background-color: #0d0e11;
+      border-top: 1px solid rgba(255, 69, 0, 0.3);
+      flex-shrink: 0;
+      box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
+    }
 
-        .win-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; height: 3px;
-            background: linear-gradient(90deg, var(--color-teuzin), var(--color-niella));
-        }
+    .dock-btn {
+      background-color: #16181d;
+      color: #dbdee1;
+      border: 1px solid rgba(255, 69, 0, 0.25);
+      height: 42px;
+      padding: 0 14px;
+      border-radius: 21px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease-in-out;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
 
-        .win-title { font-size: clamp(20px, 5.5vw, 24px); font-weight: 900; letter-spacing: 0.5px; }
-        .win-message { font-size: clamp(13px, 3.8vw, 15px); color: var(--text-muted); font-weight: 500; }
+    .dock-btn:active {
+      transform: scale(0.92);
+    }
 
-        .win-scores {
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-            width: 100%;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 14px 10px;
-        }
+    .dock-btn.active {
+      background: linear-gradient(135deg, #ff4500, #ff6a00);
+      color: #fff;
+      border-color: #ff6a00;
+      box-shadow: 0 0 16px rgba(255, 69, 0, 0.6);
+    }
 
-        .win-score-box { display: flex; flex-direction: column; gap: 4px; }
-        .win-player-name { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
-        .win-p1-name { color: var(--color-teuzin); }
-        .win-p2-name { color: var(--color-niella); }
-        .win-player-score { font-size: 24px; font-weight: 900; color: #fff; }
-        .win-vs { font-size: 11px; font-weight: 900; color: var(--text-muted); opacity: 0.6; }
+    .dock-btn.danger {
+      background-color: #2a1215;
+      color: #ff4d4d;
+      border-color: rgba(255, 77, 77, 0.4);
+    }
 
-        .btn-primary-win {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 14px;
-            font-size: 15px;
-            font-weight: 800;
-            color: #fff;
-            background: linear-gradient(135deg, var(--color-teuzin), var(--color-niella));
-            cursor: pointer;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .btn-primary-win:active { transform: scale(0.96); }
+    .dock-btn.danger:active {
+      background-color: #ff4d4d;
+      color: #fff;
+    }
 
-        #credits {
-            width: 100%;
-            flex-shrink: 0;
-            text-align: center;
-            padding: 8px;
-            color: var(--text-muted);
-            font-size: 11px;
-            font-weight: 600;
-            background: var(--bg-glass);
-            backdrop-filter: blur(8px);
-            border-top: 1px solid var(--border);
-            letter-spacing: 0.5px;
-        }
+    .chat-drawer {
+      position: absolute;
+      top: 0;
+      right: -100%;
+      width: 100%;
+      height: 100%;
+      background-color: #0d0e11;
+      display: flex;
+      flex-direction: column;
+      transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 50;
+    }
 
-        .uno-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px;
-            position: relative;
-            box-sizing: border-box;
-        }
+    .chat-drawer.open {
+      right: 0;
+    }
 
-        .opponent-area {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 75px;
-            position: relative;
-        }
+    .chat-header {
+      height: 54px;
+      padding: 0 16px;
+      padding-top: env(safe-area-inset-top, 0px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 69, 0, 0.25);
+      background-color: #121418;
+      flex-shrink: 0;
+    }
 
-        .hand-opponent {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+    .chat-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #ff4500;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-        .center-board {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            position: relative;
-            margin: auto 0;
-            width: 100%;
-        }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #444;
+      border-radius: 50%;
+      display: inline-block;
+    }
 
-        .deck-stack, .discard-stack {
-            width: 64px;
-            height: 96px;
-            position: relative;
-            cursor: pointer;
-            perspective: 1000px;
-            flex-shrink: 0;
-        }
+    .status-dot.online {
+      background-color: #00ff66;
+      box-shadow: 0 0 8px #00ff66;
+    }
 
-        .uno-card {
-            width: 64px;
-            height: 96px;
-            border-radius: 8px;
-            border: 2px solid #ffffff;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            padding: 4px;
-            position: relative;
-            font-weight: 900;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            user-select: none;
-            background-color: #121212;
-            overflow: hidden;
-            flex-shrink: 0;
-        }
+    .close-chat-btn {
+      background: none;
+      border: none;
+      color: #8a8d93;
+      font-size: 26px;
+      cursor: pointer;
+      padding: 4px 8px;
+      line-height: 1;
+    }
 
-        .uno-card.playable {
-            cursor: pointer;
-            animation: pulsePlayable 1.2s infinite alternate;
-        }
+    .chat-messages {
+      flex: 1;
+      padding: 14px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background-color: #060608;
+    }
 
-        .uno-card.playable:hover {
-            transform: translateY(-10px) scale(1.05);
-            box-shadow: 0 8px 18px rgba(255,255,255,0.4);
-            z-index: 100 !important;
-        }
+    .msg-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      max-width: 85%;
+    }
 
-        @keyframes pulsePlayable {
-            0% { box-shadow: 0 0 4px rgba(255, 255, 255, 0.4); }
-            100% { box-shadow: 0 0 14px rgba(255, 255, 255, 0.9); }
-        }
+    .msg-group.self {
+      align-self: flex-end;
+      align-items: flex-end;
+    }
 
-        .uno-card-back {
-            background: radial-gradient(circle, #ff1744 0%, #b71c1c 100%);
-            border: 2px solid #ffffff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+    .msg-group.peer {
+      align-self: flex-start;
+      align-items: flex-start;
+    }
 
-        .uno-card-back .oval-back {
-            width: 85%;
-            height: 55%;
-            background: #ffea00;
-            border-radius: 50%;
-            transform: rotate(-28deg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: inset 0 0 4px rgba(0,0,0,0.4);
-        }
+    .msg-bubble {
+      padding: 9px 13px;
+      border-radius: 16px;
+      font-size: 13px;
+      line-height: 1.4;
+      word-break: break-word;
+      user-select: text;
+    }
 
-        .uno-card-back .uno-logo-text {
-            color: #d50000;
-            font-size: 14px;
-            font-weight: 900;
-            font-style: italic;
-            text-shadow: 1px 1px 0px #fff, -1px -1px 0px #000;
-            transform: rotate(5deg);
-        }
+    .msg-group.self .msg-bubble {
+      background: linear-gradient(135deg, #ff4500, #c02800);
+      color: #fff;
+      border-bottom-right-radius: 2px;
+      box-shadow: 0 2px 8px rgba(255, 69, 0, 0.3);
+    }
 
-        .card-red { background: radial-gradient(circle, #ff4d4d 0%, #d50000 100%); }
-        .card-blue { background: radial-gradient(circle, #4d94ff 0%, #2962ff 100%); }
-        .card-green { background: radial-gradient(circle, #00e676 0%, #00c853 100%); }
-        .card-yellow { background: radial-gradient(circle, #ffea00 0%, #ffd600 100%); color: #000 !important; }
-        .card-wild { background: conic-gradient(#ff4d4d 0 90deg, #2962ff 90deg 180deg, #00c853 180deg 270deg, #ffd600 270deg 360deg); }
+    .msg-group.peer .msg-bubble {
+      background-color: #181a20;
+      color: #e0e0e0;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom-left-radius: 2px;
+    }
 
-        .card-oval {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-25deg);
-            width: 82%;
-            height: 60%;
-            background: rgba(255,255,255,0.92);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
+    .msg-sys {
+      align-self: center;
+      font-size: 10px;
+      font-weight: 600;
+      color: #ff8555;
+      background-color: rgba(255, 69, 0, 0.12);
+      border: 1px solid rgba(255, 69, 0, 0.25);
+      padding: 4px 12px;
+      border-radius: 12px;
+      margin: 4px 0;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
 
-        .card-yellow .card-oval {
-            background: rgba(0,0,0,0.85);
-        }
+    .chat-input-container {
+      padding: 12px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      background-color: #121418;
+      border-top: 1px solid rgba(255, 69, 0, 0.2);
+      flex-shrink: 0;
+    }
 
-        .card-center-symbol {
-            font-size: 20px;
-            font-weight: 900;
-            font-style: italic;
-            color: #111;
-        }
+    .input-box {
+      background-color: #060608;
+      border: 1px solid rgba(255, 69, 0, 0.4);
+      border-radius: 22px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      transition: border-color 0.2s;
+    }
 
-        .card-yellow .card-center-symbol {
-            color: #ffd600;
-        }
+    .input-box:focus-within {
+      border-color: #ff4500;
+      box-shadow: 0 0 8px rgba(255, 69, 0, 0.4);
+    }
 
-        .card-corner {
-            font-size: 10px;
-            font-weight: 900;
-            position: absolute;
-            line-height: 1;
-            color: #fff;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-        }
+    textarea {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 13px;
+      resize: none;
+      height: 26px;
+      line-height: 26px;
+      user-select: text;
+    }
 
-        .card-yellow .card-corner {
-            color: #000;
-            text-shadow: none;
-        }
+    .overlay-connect {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(5, 5, 7, 0.96);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 16px;
+      transition: opacity 0.3s, visibility 0.3s;
+    }
 
-        .corner-top-left { top: 3px; left: 4px; }
-        .corner-bottom-right { bottom: 3px; right: 4px; transform: rotate(180deg); }
+    .overlay-connect.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
 
-        .color-indicator {
-            position: absolute;
-            bottom: -22px;
-            font-size: 11px;
-            font-weight: 800;
-            padding: 2px 8px;
-            border-radius: 10px;
-            background: rgba(0,0,0,0.75);
-            border: 1px solid var(--border);
-            color: #fff;
-            white-space: nowrap;
-        }
+    .connect-card {
+      background-color: #101216;
+      border: 1px solid rgba(255, 69, 0, 0.35);
+      padding: 28px 24px;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.95), 0 0 20px rgba(255, 69, 0, 0.2);
+      text-align: center;
+    }
 
-        .player-area {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-        }
+    .connect-card h2 {
+      color: #ff4500;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
 
-        .hand-scroll-container {
-            width: 100%;
-            overflow-x: auto;
-            overflow-y: hidden;
-            padding: 12px 10px 16px 10px;
-            display: flex;
-            justify-content: flex-start;
-            align-items: center;
-            scroll-behavior: smooth;
-        }
+    .id-box {
+      background-color: #060608;
+      border: 1px dashed rgba(255, 69, 0, 0.5);
+      padding: 12px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
 
-        .hand-scroll-container::-webkit-scrollbar {
-            height: 6px;
-        }
+    .id-code {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 3px;
+    }
 
-        .hand-scroll-container::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            margin: 0 20px;
-        }
+    .btn-action {
+      background: linear-gradient(135deg, #ff4500, #c02800);
+      color: #fff;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
 
-        .hand-scroll-container::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.25);
-            border-radius: 10px;
-        }
+    .btn-action:active {
+      transform: scale(0.95);
+    }
 
-        .hand-scroll-container::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.45);
-        }
+    .connect-input-group {
+      display: flex;
+      gap: 8px;
+    }
 
-        .hand-player {
-            display: flex;
-            align-items: center;
-            margin: 0 auto;
-            min-width: max-content;
-        }
+    .connect-input-group input {
+      flex: 1;
+      background-color: #060608;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 10px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      text-align: center;
+      letter-spacing: 2px;
+      font-family: 'Courier New', Courier, monospace;
+      transition: border-color 0.2s;
+    }
 
-        .hand-player .uno-card {
-            margin-left: -18px;
-        }
+    .connect-input-group input:focus {
+      border-color: #ff4500;
+    }
 
-        .hand-player .uno-card:first-child {
-            margin-left: 0;
-        }
+    .video-overlay-controls {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
 
-        .uno-btn-real {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #ff1744 0%, #b71c1c 100%);
-            border: 2px solid #fff;
-            box-shadow: 0 4px 12px rgba(255,23,68,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #ffea00;
-            font-weight: 900;
-            font-size: 13px;
-            font-style: italic;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-shadow: 1px 1px 0px #000;
-            outline: none;
-            flex-shrink: 0;
-        }
+    .stage:hover .video-overlay-controls,
+    .stage:active .video-overlay-controls {
+      opacity: 1;
+    }
 
-        .uno-btn-real:hover {
-            transform: scale(1.08);
-        }
+    .icon-btn {
+      background-color: rgba(0, 0, 0, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      backdrop-filter: blur(4px);
+    }
 
-        .uno-btn-real:active {
-            transform: scale(0.92);
-        }
-
-        .uno-btn-real.active-uno {
-            animation: unoGlow 0.8s infinite alternate;
-            background: radial-gradient(circle, #ffea00 0%, #ff6d00 100%);
-            color: #d50000;
-        }
-
-        @keyframes unoGlow {
-            0% { box-shadow: 0 0 8px #ffea00; transform: scale(1); }
-            100% { box-shadow: 0 0 18px #ffea00, 0 0 8px #ff1744; transform: scale(1.1); }
-        }
-
-        .color-picker-modal {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            z-index: 300;
-            border-radius: 24px;
-        }
-
-        .color-picker-title {
-            font-weight: 900;
-            font-size: 16px;
-            color: #fff;
-            text-transform: uppercase;
-        }
-
-        .color-picker-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
-        }
-
-        .color-btn {
-            width: 68px;
-            height: 68px;
-            border-radius: 16px;
-            border: 3px solid #fff;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-
-        .color-btn:active {
-            transform: scale(0.9);
-        }
-
-        .color-btn.red { background: #ff1744; }
-        .color-btn.blue { background: #2962ff; }
-        .color-btn.green { background: #00c853; }
-        .color-btn.yellow { background: #ffd600; }
-
-        .uno-badge {
-            position: absolute;
-            top: -8px;
-            background: #ffea00;
-            color: #d50000;
-            font-weight: 900;
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 8px;
-            border: 1px solid #d50000;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            text-transform: uppercase;
-        }
-    </style>
-
-    <script type="importmap">
-        {
-            "imports": {
-                "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
-                "firebase/database": "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js"
-            }
-        }
-    </script>
+    @media (min-width: 768px) {
+      .chat-drawer {
+        width: 360px;
+        right: -360px;
+        border-left: 1px solid rgba(255, 69, 0, 0.25);
+      }
+    }
+  </style>
 </head>
 <body>
 
-    <div id="header-bar">
-        <div id="app-title" class="logo-title">🎮 Nome do Game</div>
-        <div class="header-actions">
-            <button id="btn-toggle-music" class="header-btn" title="Áudio">🔊</button>
-            <button id="btn-reset-game" class="header-btn" title="Reiniciar Partida">🔄</button>
+  <div class="app-viewport">
+    <div class="overlay-connect" id="connectOverlay">
+      <div class="connect-card">
+        <h2>
+          <span>Conexão Privada</span>
+          <span class="deluxe-badge">Deluxe</span>
+        </h2>
+        
+        <div>
+          <span style="font-size: 11px; color: #8a8d93; display: block; margin-bottom: 6px; text-transform: uppercase; font-weight: 700;">Seu Código:</span>
+          <div class="id-box">
+            <span class="id-code" id="myCodeDisplay">------</span>
+            <button class="btn-action" id="btnCopyCode">Copiar</button>
+          </div>
         </div>
+
+        <div>
+          <span style="font-size: 11px; color: #8a8d93; display: block; margin-bottom: 6px; text-transform: uppercase; font-weight: 700;">Conectar Ao Parceiro:</span>
+          <div class="connect-input-group">
+            <input type="text" id="friendCodeInput" placeholder="000000" maxlength="6">
+            <button class="btn-action" id="btnConnect">Conectar</button>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div id="game-stats">
-        <div id="box-p1" class="player-stat-box">
-            <span class="stat-label">Player 1 <span id="dot-p1">🔴</span></span>
-            <span id="meta-p1" class="stat-meta">0 Pts</span>
+    <div class="media-panel">
+      <div class="stage" id="stageContainer">
+        <div class="video-overlay-controls">
+          <button class="icon-btn" id="btnMuteRemote" title="Mutar Som Recebido">🔊</button>
         </div>
-        <div id="box-p2" class="player-stat-box">
-            <span class="stat-label"><span id="dot-p2">🔴</span> Player 2</span>
-            <span id="meta-p2" class="stat-meta">0 Pts</span>
+
+        <div class="stage-placeholder" id="placeholder">
+          <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
+          <span style="font-weight: 600;">Transmissão em Alta Definição</span>
+          <span class="deluxe-badge" id="statusBadge">Aguardando Conexão...</span>
         </div>
+        <video id="remoteVideo" autoplay playsinline style="display:none;"></video>
+      </div>
+
+      <div class="author-tag">Made By: @085_Teuzinnn</div>
+
+      <div class="controls-dock">
+        <button class="dock-btn" id="btnMic">🎙️ Áudio</button>
+        <button class="dock-btn" id="btnScreen">🖥️ Tela 4K</button>
+        <button class="dock-btn" id="btnFullscreen">⛶ Full</button>
+        <button class="dock-btn" id="btnToggleChat">💬 Chat</button>
+        <button class="dock-btn danger" id="btnHangup">🚪 Sair</button>
+      </div>
     </div>
 
-    <div id="game-container">
-        <div id="setup-screen">
-            <div class="lobby-buttons-row">
-                <button class="btn-primary" id="btn-join-p1">👨 Player 1</button>
-                <button class="btn-primary" id="btn-join-p2">👩 Player 2</button>
-            </div>
-        </div>
+    <div class="chat-drawer" id="chatDrawer">
+      <div class="chat-header">
+        <span class="chat-title">
+          <span class="status-dot" id="statusDot"></span>
+          Chat Privado HQ
+        </span>
+        <button class="close-chat-btn" id="btnCloseChat">×</button>
+      </div>
 
-        <div id="game-screen">
-            <div id="turn-bar">
-                <span id="status-text">Aguardando...</span>
-            </div>
-            
-            <div id="table-board"></div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="msg-sys">SISTEMA P2P ENCRIPTADO PRONTO.</div>
+      </div>
 
-            <div id="victory-modal" class="modal-overlay">
-                <div class="win-card">
-                    <div id="win-title" class="win-title">🏅 VITÓRIA!</div>
-                    <div id="win-message" class="win-message">você venceu essa rodada!</div>
-                    <div class="win-scores">
-                        <div class="win-score-box">
-                            <span class="win-player-name win-p1-name">Player 1</span>
-                            <span id="win-score-p1" class="win-player-score">0</span>
-                        </div>
-                        <div class="win-vs">VS</div>
-                        <div class="win-score-box">
-                            <span class="win-player-name win-p2-name">Player 2</span>
-                            <span id="win-score-p2" class="win-player-score">0</span>
-                        </div>
-                    </div>
-                    <button id="btn-restart-win" class="btn-primary-win">🎮 Mais Uma</button>
-                </div>
-            </div>
+      <div class="chat-input-container">
+        <div class="input-box">
+          <textarea id="msgInput" placeholder="Digite uma mensagem..."></textarea>
         </div>
+      </div>
     </div>
+  </div>
 
-    <div id="credits">Made By: @085_Player 1nnn</div>
+  <audio id="remoteAudio" autoplay></audio>
 
-    <script type="module">
-        import { initializeApp } from "firebase/app";
-        import { getDatabase, ref, set, update, onValue, runTransaction, onDisconnect } from "firebase/database";
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
 
-        const GAME_CONFIG = {
-            title: "🎮 UNO Multiplayer 🕹",
-            dbFolder: "UNOGame"
-        };
+    let peer = null;
+    let dataConn = null;
+    let mediaConn = null;
+    let localStream = null;
+    let screenStream = null;
+    let micEnabled = false;
+    let isRemoteMuted = false;
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBqRAsWfP4w-r82PZOaJcDck7W8Aeph3p8",
-            authDomain: "teuzin-games.firebaseapp.com",
-            databaseURL: "https://teuzin-games-default-rtdb.firebaseio.com",
-            projectId: "teuzin-games",
-            storageBucket: "teuzin-games.firebasestorage.app",
-            messagingSenderId: "548192563345",
-            appId: "1:548192563345:web:e729e39f9f266aa6a68f30"
-        };
+    const myCodeDisplay = document.getElementById('myCodeDisplay');
+    const friendCodeInput = document.getElementById('friendCodeInput');
+    const btnCopyCode = document.getElementById('btnCopyCode');
+    const btnConnect = document.getElementById('btnConnect');
+    const connectOverlay = document.getElementById('connectOverlay');
+    
+    const chatDrawer = document.getElementById('chatDrawer');
+    const btnToggleChat = document.getElementById('btnToggleChat');
+    const btnCloseChat = document.getElementById('btnCloseChat');
+    const chatMessages = document.getElementById('chatMessages');
+    const msgInput = document.getElementById('msgInput');
+    const statusDot = document.getElementById('statusDot');
+    
+    const stageContainer = document.getElementById('stageContainer');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const remoteAudio = document.getElementById('remoteAudio');
+    const placeholder = document.getElementById('placeholder');
+    const statusBadge = document.getElementById('statusBadge');
+    const btnMuteRemote = document.getElementById('btnMuteRemote');
+    
+    const btnMic = document.getElementById('btnMic');
+    const btnScreen = document.getElementById('btnScreen');
+    const btnFullscreen = document.getElementById('btnFullscreen');
+    const btnHangup = document.getElementById('btnHangup');
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        const roomRef = ref(db, GAME_CONFIG.dbFolder);
+    function generateShortId() {
+      return Math.floor(100000 + Math.random() * 900000).toString();
+    }
 
-        let myID = "";
-        let currentGameState = null;
-        let lastPlayedWinner = "";
-        let isMuted = false;
-        let hasPlayedGoSound = false;
-        let selectingWildCardIndex = null;
-        let lastAudioTrigger = 0;
-
-        let bgMusic = new Audio("music.mp3");
-        bgMusic.loop = true;
-        bgMusic.volume = 0.05;
-
-        const audioWinP1 = new Audio("vt1.mp3");
-        const audioWinP2 = new Audio("vt2.mp3");
-        const audioDraw = new Audio("emp.mp3");
-        const audioGo = new Audio("go.mp3");
-        const audioUno = new Audio("uno.mp3");
-        const audioM2 = new Audio("m2.mp3");
-        const audioM4 = new Audio("m4.mp3");
-
-        const allAudios = [bgMusic, audioWinP1, audioWinP2, audioDraw, audioGo, audioUno, audioM2, audioM4];
-
-        const $ = (id) => document.getElementById(id);
-
-        $("app-title").textContent = GAME_CONFIG.title;
-        document.title = GAME_CONFIG.title;
-
-        const setupScreen = $("setup-screen");
-        const gameScreen = $("game-screen");
-        const tableBoard = $("table-board");
-        const btnJoinP1 = $("btn-join-p1");
-        const btnJoinP2 = $("btn-join-p2");
-        const btnResetGame = $("btn-reset-game");
-        const btnToggleMusic = $("btn-toggle-music");
-        const boxP1 = $("box-p1");
-        const boxP2 = $("box-p2");
-        const metaP1 = $("meta-p1");
-        const metaP2 = $("meta-p2");
-        const dotP1 = $("dot-p1");
-        const dotP2 = $("dot-p2");
-        const statusText = $("status-text");
-
-        const victoryModal = $("victory-modal");
-        const winTitle = $("win-title");
-        const winMessage = $("win-message");
-        const winScoreP1 = $("win-score-p1");
-        const winScoreP2 = $("win-score-p2");
-        const btnRestartWin = $("btn-restart-win");
-
-        function initializeRoomIfEmpty() {
-            runTransaction(roomRef, (currentData) => {
-                if (currentData === null) {
-                    return {
-                        connected: { p1: "offline", p2: "offline" },
-                        p1_score: 0,
-                        p2_score: 0,
-                        turn: "p1",
-                        status: "WAITING",
-                        winner: "",
-                        customData: getInitialCustomGameData()
-                    };
-                }
-                return currentData;
-            });
+    function initPeer() {
+      const customId = generateShortId();
+      peer = new Peer(customId, {
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' }
+          ]
         }
+      });
 
-        function resetMatchState() {
-            lastPlayedWinner = "";
-            hasPlayedGoSound = false;
-            selectingWildCardIndex = null;
-            update(roomRef, {
-                turn: "p1",
-                status: "IN_PROGRESS",
-                winner: "",
-                customData: getInitialCustomGameData()
-            });
+      peer.on('open', (id) => {
+        myCodeDisplay.textContent = id;
+      });
+
+      peer.on('connection', (conn) => {
+        setupDataConnection(conn);
+      });
+
+      peer.on('call', async (call) => {
+        mediaConn = call;
+        call.answer(localStream);
+        setupMediaCall(call);
+      });
+
+      peer.on('error', (err) => {
+        addSystemMessage(`ERRO: ${err.type.toUpperCase()}`);
+      });
+    }
+
+    btnCopyCode.onclick = () => {
+      navigator.clipboard.writeText(myCodeDisplay.textContent);
+      btnCopyCode.textContent = 'Copiado!';
+      setTimeout(() => btnCopyCode.textContent = 'Copiar', 2000);
+    };
+
+    btnConnect.onclick = () => {
+      const code = friendCodeInput.value.trim();
+      if (code.length !== 6) return;
+      
+      const conn = peer.connect(code, { reliable: true });
+      setupDataConnection(conn);
+    };
+
+    function setupDataConnection(conn) {
+      dataConn = conn;
+
+      dataConn.on('open', () => {
+        connectOverlay.classList.add('hidden');
+        statusDot.classList.add('online');
+        if (statusBadge) statusBadge.style.display = 'none';
+        addSystemMessage('CONEXÃO ULTRA HQ ESTABELECIDA');
+      });
+
+      dataConn.on('data', (data) => {
+        if (data.type === 'chat') {
+          addMessage(data.text, 'peer');
         }
+      });
 
-        function resetFullGameState() {
-            lastPlayedWinner = "";
-            hasPlayedGoSound = false;
-            selectingWildCardIndex = null;
-            update(roomRef, {
-                p1_score: 0,
-                p2_score: 0,
-                turn: "p1",
-                status: "IN_PROGRESS",
-                winner: "",
-                customData: getInitialCustomGameData()
-            });
+      dataConn.on('close', () => {
+        connectOverlay.classList.remove('hidden');
+        statusDot.classList.remove('online');
+        if (statusBadge) statusBadge.style.display = 'inline-block';
+        addSystemMessage('CONEXÃO ENCERRADA');
+        resetMediaState();
+      });
+    }
+
+    function setupMediaCall(call) {
+      call.on('stream', (remoteStream) => {
+        const hasVideo = remoteStream.getVideoTracks().length > 0;
+        if (hasVideo) {
+          remoteVideo.srcObject = remoteStream;
+          remoteVideo.style.display = 'block';
+          placeholder.style.display = 'none';
+        } else {
+          remoteAudio.srcObject = remoteStream;
         }
+      });
 
-        function joinGame(playerRole) {
-            myID = playerRole;
+      call.on('close', () => {
+        resetMediaState();
+      });
+    }
 
-            setupScreen.style.display = "none";
-            gameScreen.style.display = "flex";
-            btnResetGame.style.display = "flex";
-            btnToggleMusic.style.display = "flex";
+    function resetMediaState() {
+      remoteVideo.style.display = 'none';
+      placeholder.style.display = 'flex';
+      if (statusBadge) statusBadge.style.display = 'inline-block';
+      remoteVideo.srcObject = null;
+      remoteAudio.srcObject = null;
+    }
 
-            if (!isMuted && bgMusic.paused) {
-                bgMusic.play().catch(() => {});
-            }
+    btnMuteRemote.onclick = () => {
+      isRemoteMuted = !isRemoteMuted;
+      remoteVideo.muted = isRemoteMuted;
+      remoteAudio.muted = isRemoteMuted;
+      btnMuteRemote.textContent = isRemoteMuted ? '🔇' : '🔊';
+    };
 
-            initializeRoomIfEmpty();
+    btnToggleChat.onclick = () => {
+      chatDrawer.classList.toggle('open');
+      btnToggleChat.classList.toggle('active');
+    };
 
-            const connectedRef = ref(db, ".info/connected");
-            const myStatusRef = ref(db, `${GAME_CONFIG.dbFolder}/connected/${myID}`);
+    btnCloseChat.onclick = () => {
+      chatDrawer.classList.remove('open');
+      btnToggleChat.classList.remove('active');
+    };
 
-            onValue(connectedRef, (snap) => {
-                if (snap.val() === true) {
-                    onDisconnect(myStatusRef).set("offline");
-                    set(myStatusRef, "online");
-                }
-            });
+    msgInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
 
-            onValue(roomRef, (snapshot) => {
-                if (snapshot.exists()) {
-                    currentGameState = snapshot.val();
-                    processState(currentGameState);
-                }
-            });
+    function sendMessage() {
+      const text = msgInput.value.trim();
+      if (!text) return;
+
+      if (dataConn && dataConn.open) {
+        dataConn.send({ type: 'chat', text: text });
+        addMessage(text, 'self');
+        msgInput.value = '';
+      }
+    }
+
+    function addMessage(text, side) {
+      const group = document.createElement('div');
+      group.className = `msg-group ${side}`;
+      
+      const bubble = document.createElement('div');
+      bubble.className = 'msg-bubble';
+      bubble.textContent = text;
+      
+      group.appendChild(bubble);
+      chatMessages.appendChild(group);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function addSystemMessage(text) {
+      const sys = document.createElement('div');
+      sys.className = `msg-sys`;
+      sys.textContent = text;
+      chatMessages.appendChild(sys);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    btnMic.onclick = async () => {
+      if (!micEnabled) {
+        try {
+          localStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            },
+            video: false
+          });
+          micEnabled = true;
+          btnMic.classList.add('active');
+          
+          if (dataConn && dataConn.peer) {
+            mediaConn = peer.call(dataConn.peer, localStream);
+            setupMediaCall(mediaConn);
+          }
+        } catch (err) {
+          addSystemMessage('FALHA AO ACESSAR MICROFONE');
         }
-
-        function updateDotStatus(element, status) {
-            element.textContent = status === "online" ? "🟢" : (status === "afk" ? "🟡" : "🔴");
+      } else {
+        if (localStream) {
+          localStream.getTracks().forEach(track => track.stop());
         }
+        micEnabled = false;
+        btnMic.classList.remove('active');
+      }
+    };
 
-        btnJoinP1.addEventListener("click", () => joinGame("p1"));
-        btnJoinP2.addEventListener("click", () => joinGame("p2"));
-
-        btnResetGame.addEventListener("click", () => {
-            resetFullGameState();
+    btnScreen.onclick = async () => {
+      try {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            width: { ideal: 3840, max: 3840 },
+            height: { ideal: 2160, max: 2160 },
+            frameRate: { ideal: 60, max: 60 },
+            displaySurface: 'monitor'
+          },
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
+          }
         });
-
-        btnToggleMusic.addEventListener("click", () => {
-            isMuted = !isMuted;
-            allAudios.forEach(a => a.muted = isMuted);
-            btnToggleMusic.textContent = isMuted ? "🔇" : "🔊";
-
-            if (!isMuted && bgMusic.paused) {
-                bgMusic.play().catch(() => {});
-            }
-        });
-
-        btnRestartWin.addEventListener("click", () => {
-            victoryModal.style.display = "none";
-            resetMatchState();
-        });
-
-        function processState(state) {
-            if (!state) return;
-
-            const scoreP1 = state.p1_score || 0;
-            const scoreP2 = state.p2_score || 0;
-            metaP1.textContent = `${scoreP1} Pts`;
-            metaP2.textContent = `${scoreP2} Pts`;
-
-            const connected = state.connected || {};
-            updateDotStatus(dotP1, connected.p1 || "offline");
-            updateDotStatus(dotP2, connected.p2 || "offline");
-
-            boxP1.classList.toggle("active-turn", state.turn === "p1");
-            boxP2.classList.toggle("active-turn", state.turn === "p2");
-
-            const p1Online = connected.p1 === "online";
-            const p2Online = connected.p2 === "online";
-
-            if (!p1Online && !p2Online) {
-                statusText.textContent = "Aguardando Ambos...";
-                hasPlayedGoSound = false;
-            } else if (!p1Online) {
-                statusText.textContent = "Aguardando Player 1...";
-                hasPlayedGoSound = false;
-            } else if (!p2Online) {
-                statusText.textContent = "Aguardando Player 2...";
-                hasPlayedGoSound = false;
-            } else {
-                let opponentName = myID === "p1" ? "Player 2" : "Player 1";
-                statusText.textContent = state.turn === myID ? "⚡ Sua vez!" : `⏳ Vez de ${opponentName}!`;
-                
-                if (!state.winner && lastPlayedWinner !== "") {
-                    hasPlayedGoSound = false;
-                }
-
-                if (!hasPlayedGoSound && !state.winner) {
-                    hasPlayedGoSound = true;
-                    if (!isMuted) {
-                        audioGo.currentTime = 0;
-                        audioGo.play().catch(() => {});
-                    }
-                }
-            }
-
-            if (state.customData && state.customData.lastAudio && state.customData.lastAudio.timestamp > lastAudioTrigger) {
-                lastAudioTrigger = state.customData.lastAudio.timestamp;
-                const audioType = state.customData.lastAudio.type;
-                if (!isMuted) {
-                    if (audioType === "uno") {
-                        audioUno.currentTime = 0;
-                        audioUno.play().catch(() => {});
-                    } else if (audioType === "m2") {
-                        audioM2.currentTime = 0;
-                        audioM2.play().catch(() => {});
-                    } else if (audioType === "m4") {
-                        audioM4.currentTime = 0;
-                        audioM4.play().catch(() => {});
-                    }
-                }
-            }
-
-            renderCustomGameBoard(state);
-
-            if (state.winner) {
-                if (lastPlayedWinner !== state.winner) {
-                    lastPlayedWinner = state.winner;
-                    
-                    if (!isMuted) {
-                        if (state.winner === "p1") {
-                            audioWinP1.currentTime = 0;
-                            audioWinP1.play().catch(() => {});
-                        } else if (state.winner === "p2") {
-                            audioWinP2.currentTime = 0;
-                            audioWinP2.play().catch(() => {});
-                        } else if (state.winner === "draw") {
-                            audioDraw.currentTime = 0;
-                            audioDraw.play().catch(() => {});
-                        }
-                    }
-                }
-
-                winScoreP1.textContent = scoreP1;
-                winScoreP2.textContent = scoreP2;
-
-                if (state.winner === "draw") {
-                    winTitle.textContent = "🤝 EMPATE!";
-                    winTitle.style.color = "#c5c6c7";
-                    winMessage.textContent = "Ninguém levou essa rodada.";
-                } else if (state.winner === myID) {
-                    winTitle.textContent = "🏅 VITÓRIA!";
-                    winTitle.style.color = "#00e676";
-                    winMessage.textContent = "você venceu essa rodada!";
-                } else {
-                    winTitle.textContent = "😓 DERROTA!";
-                    winTitle.style.color = "#ff1744";
-                    winMessage.textContent = "Não foi dessa vez...";
-                }
-
-                victoryModal.style.display = "flex";
-            } else {
-                lastPlayedWinner = "";
-                victoryModal.style.display = "none";
-            }
+        
+        if (dataConn && dataConn.peer) {
+          mediaConn = peer.call(dataConn.peer, screenStream);
+          setupMediaCall(mediaConn);
         }
 
-        function isMyTurn() {
-            return currentGameState && currentGameState.turn === myID;
-        }
+        btnScreen.classList.add('active');
 
-        function canMakeMove() {
-            return isMyTurn() &&
-                   currentGameState?.connected?.p1 === "online" &&
-                   currentGameState?.connected?.p2 === "online" &&
-                   !currentGameState?.winner;
-        }
-
-        function switchTurn() {
-            const nextTurn = currentGameState.turn === "p1" ? "p2" : "p1";
-            update(roomRef, { turn: nextTurn });
-        }
-
-        function updateGameData(newCustomData) {
-            update(ref(db, `${GAME_CONFIG.dbFolder}/customData`), newCustomData);
-        }
-
-        function finishGame(winnerRole) {
-            let updates = {
-                status: "FINISHED",
-                winner: winnerRole
-            };
-
-            if (winnerRole === "p1") {
-                updates.p1_score = (currentGameState.p1_score || 0) + 1;
-            } else if (winnerRole === "p2") {
-                updates.p2_score = (currentGameState.p2_score || 0) + 1;
-            }
-
-            update(roomRef, updates);
-        }
-
-        function createFullDeck() {
-            const colors = ['red', 'blue', 'green', 'yellow'];
-            const values = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '🚫', '🔄', '+2'];
-            let deck = [];
-            let id = 1;
-
-            colors.forEach(color => {
-                values.forEach(val => {
-                    deck.push({ id: id++, color: color, value: val });
-                    if (val !== '0') {
-                        deck.push({ id: id++, color: color, value: val });
-                    }
-                });
-            });
-
-            for (let i = 0; i < 4; i++) {
-                deck.push({ id: id++, color: 'wild', value: '🌈' });
-                deck.push({ id: id++, color: 'wild', value: '+4' });
-            }
-
-            return shuffleDeck(deck);
-        }
-
-        function shuffleDeck(array) {
-            let m = array.length, t, i;
-            while (m) {
-                i = Math.floor(Math.random() * m--);
-                t = array[m];
-                array[m] = array[i];
-                array[i] = t;
-            }
-            return array;
-        }
-
-        function getInitialCustomGameData() {
-            let deck = createFullDeck();
-            let p1Hand = deck.splice(0, 7);
-            let p2Hand = deck.splice(0, 7);
-            
-            let topCardIndex = deck.findIndex(c => c.color !== 'wild');
-            let topCard = topCardIndex !== -1 ? deck.splice(topCardIndex, 1)[0] : deck.splice(0, 1)[0];
-
-            return {
-                deck: deck,
-                discard: [topCard],
-                currentColor: topCard.color === 'wild' ? 'red' : topCard.color,
-                p1Hand: p1Hand,
-                p2Hand: p2Hand,
-                p1UnoCalled: false,
-                p2UnoCalled: false,
-                p1UnoProtected: false,
-                p2UnoProtected: false,
-                pendingDraw: 0,
-                lastAudio: { type: "", timestamp: 0 }
-            };
-        }
-
-        function isCardPlayable(card, topCard, currentColor, pendingDraw) {
-            if (pendingDraw > 0) {
-                if (pendingDraw % 2 === 0 && card.value === '+2') return true;
-                if (pendingDraw % 4 === 0 && card.value === '+4') return true;
-                return false;
-            }
-            if (card.color === 'wild') return true;
-            if (card.color === currentColor) return true;
-            if (card.value === topCard.value) return true;
-            return false;
-        }
-
-        window.handleCardClick = function(index) {
-            if (!canMakeMove()) return;
-            const customData = currentGameState.customData;
-            const myHand = myID === 'p1' ? customData.p1Hand : customData.p2Hand;
-            const card = myHand[index];
-            const topCard = customData.discard[customData.discard.length - 1];
-
-            if (!isCardPlayable(card, topCard, customData.currentColor, customData.pendingDraw || 0)) return;
-
-            if (card.color === 'wild') {
-                selectingWildCardIndex = index;
-                renderCustomGameBoard(currentGameState);
-                return;
-            }
-
-            playCard(index, card.color);
+        screenStream.getVideoTracks()[0].onended = () => {
+          btnScreen.classList.remove('active');
         };
+      } catch (err) {
+        addSystemMessage('COMPARTILHAMENTO CANCELADO');
+      }
+    };
 
-        window.selectWildColor = function(color) {
-            if (selectingWildCardIndex === null) return;
-            const index = selectingWildCardIndex;
-            selectingWildCardIndex = null;
-            playCard(index, color);
-        };
-
-        function playCard(index, chosenColor) {
-            const customData = JSON.parse(JSON.stringify(currentGameState.customData));
-            const myHand = myID === 'p1' ? customData.p1Hand : customData.p2Hand;
-            const playedCard = myHand.splice(index, 1)[0];
-
-            customData.discard.push(playedCard);
-            customData.currentColor = playedCard.color === 'wild' ? chosenColor : playedCard.color;
-
-            if (myID === 'p1') {
-                customData.p1Hand = myHand;
-                if (myHand.length !== 1) customData.p1UnoProtected = false;
-            } else {
-                customData.p2Hand = myHand;
-                if (myHand.length !== 1) customData.p2UnoProtected = false;
-            }
-
-            if (myHand.length === 0) {
-                updateGameData(customData);
-                finishGame(myID);
-                return;
-            }
-
-            let nextTurnSkip = false;
-
-            if (playedCard.value === '+2') {
-                customData.pendingDraw = (customData.pendingDraw || 0) + 2;
-                customData.lastAudio = { type: "m2", timestamp: Date.now() };
-            } else if (playedCard.value === '+4') {
-                customData.pendingDraw = (customData.pendingDraw || 0) + 4;
-                customData.lastAudio = { type: "m4", timestamp: Date.now() };
-            } else if (playedCard.value === '🚫' || playedCard.value === '🔄') {
-                nextTurnSkip = true;
-            }
-
-            updateGameData(customData);
-
-            if (nextTurnSkip) {
-            } else {
-                switchTurn();
-            }
+    btnFullscreen.onclick = () => {
+      if (!document.fullscreenElement) {
+        if (stageContainer.requestFullscreen) {
+          stageContainer.requestFullscreen();
+        } else if (stageContainer.webkitRequestFullscreen) {
+          stageContainer.webkitRequestFullscreen();
         }
-
-        window.handleDrawDeck = function() {
-            if (!canMakeMove()) return;
-            const customData = JSON.parse(JSON.stringify(currentGameState.customData));
-            const myHand = myID === 'p1' ? customData.p1Hand : customData.p2Hand;
-            let deck = customData.deck || [];
-            let discard = customData.discard || [];
-
-            let amountToDraw = customData.pendingDraw > 0 ? customData.pendingDraw : 1;
-            customData.pendingDraw = 0;
-
-            for (let i = 0; i < amountToDraw; i++) {
-                if (deck.length === 0) {
-                    if (discard.length > 1) {
-                        const top = discard.pop();
-                        deck = shuffleDeck(discard);
-                        discard = [top];
-                    } else {
-                        break;
-                    }
-                }
-                if (deck.length > 0) {
-                    myHand.push(deck.pop());
-                }
-            }
-
-            customData.deck = deck;
-            customData.discard = discard;
-
-            if (myID === 'p1') {
-                customData.p1Hand = myHand;
-                customData.p1UnoProtected = false;
-            } else {
-                customData.p2Hand = myHand;
-                customData.p2UnoProtected = false;
-            }
-
-            updateGameData(customData);
-            switchTurn();
-        };
-
-        window.handleUnoButtonClick = function() {
-            if (!currentGameState || currentGameState.winner) return;
-            const customData = JSON.parse(JSON.stringify(currentGameState.customData));
-            const myHand = myID === 'p1' ? customData.p1Hand : customData.p2Hand;
-            const oppID = myID === 'p1' ? 'p2' : 'p1';
-            const oppHand = oppID === 'p1' ? customData.p1Hand : customData.p2Hand;
-
-            let updated = false;
-
-            if (myHand.length === 1 && !customData[`${myID}UnoProtected`]) {
-                customData[`${myID}UnoProtected`] = true;
-                customData[`${myID}UnoCalled`] = true;
-                customData.lastAudio = { type: "uno", timestamp: Date.now() };
-                updated = true;
-            } 
-            else if (oppHand.length === 1 && !customData[`${oppID}UnoProtected`]) {
-                let deck = customData.deck || [];
-                let discard = customData.discard || [];
-
-                for (let i = 0; i < 2; i++) {
-                    if (deck.length === 0 && discard.length > 1) {
-                        const top = discard.pop();
-                        deck = shuffleDeck(discard);
-                        discard = [top];
-                    }
-                    if (deck.length > 0) {
-                        oppHand.push(deck.pop());
-                    }
-                }
-
-                customData.deck = deck;
-                customData.discard = discard;
-                if (oppID === 'p1') customData.p1Hand = oppHand;
-                else customData.p2Hand = oppHand;
-
-                customData.lastAudio = { type: "uno", timestamp: Date.now() };
-                updated = true;
-            }
-
-            if (updated) {
-                updateGameData(customData);
-            }
-        };
-
-        function renderCardHTML(card, isPlayable = false, onClickAttr = '') {
-            if (!card) return '';
-            const colorClass = `card-${card.color}`;
-            const symbol = card.value;
-
-            return `
-                <div class="uno-card ${colorClass} ${isPlayable ? 'playable' : ''}" ${onClickAttr}>
-                    <span class="card-corner corner-top-left">${symbol}</span>
-                    <div class="card-oval">
-                        <span class="card-center-symbol">${symbol}</span>
-                    </div>
-                    <span class="card-corner corner-bottom-right">${symbol}</span>
-                </div>
-            `;
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
         }
+      }
+    };
 
-        function renderCustomGameBoard(state) {
-            const customData = state.customData || getInitialCustomGameData();
-            const topCard = customData.discard ? customData.discard[customData.discard.length - 1] : null;
-            const currentColor = customData.currentColor || 'red';
+    btnHangup.onclick = () => {
+      if (dataConn) dataConn.close();
+      if (mediaConn) mediaConn.close();
+      if (localStream) localStream.getTracks().forEach(t => t.stop());
+      if (screenStream) screenStream.getTracks().forEach(t => t.stop());
+      
+      resetMediaState();
+      btnMic.classList.remove('active');
+      btnScreen.classList.remove('active');
+      statusDot.classList.remove('online');
+      connectOverlay.classList.remove('hidden');
+    };
 
-            const myHand = myID === 'p1' ? (customData.p1Hand || []) : (customData.p2Hand || []);
-            const oppHand = myID === 'p1' ? (customData.p2Hand || []) : (customData.p1Hand || []);
-
-            const oppUnoProtected = myID === 'p1' ? customData.p2UnoProtected : customData.p1UnoProtected;
-            const myUnoProtected = myID === 'p1' ? customData.p1UnoProtected : customData.p2UnoProtected;
-
-            let oppCardsHTML = '';
-            oppHand.forEach((_, idx) => {
-                oppCardsHTML += `
-                    <div class="uno-card uno-card-back" style="margin-left: ${idx === 0 ? '0' : '-35px'}; z-index: ${idx}">
-                        <div class="oval-back"><span class="uno-logo-text">UNO</span></div>
-                    </div>
-                `;
-            });
-
-            let myCardsHTML = '';
-            myHand.forEach((card, idx) => {
-                const playable = canMakeMove() && isCardPlayable(card, topCard, currentColor, customData.pendingDraw || 0);
-                const clickAttr = playable ? `onclick="window.handleCardClick(${idx})"` : '';
-                myCardsHTML += renderCardHTML(card, playable, clickAttr);
-            });
-
-            const colorNames = { red: 'Vermelho', blue: 'Azul', green: 'Verde', yellow: 'Amarelo' };
-            const colorBg = { red: '#ff1744', blue: '#2962ff', green: '#00c853', yellow: '#ffd600' };
-
-            let unoBtnActive = (myHand.length === 1 && !myUnoProtected) || (oppHand.length === 1 && !oppUnoProtected);
-
-            tableBoard.innerHTML = `
-                <div class="uno-container">
-                    <div class="opponent-area">
-                        ${oppHand.length === 1 ? '<div class="uno-badge">1 CARTA!</div>' : ''}
-                        <div class="hand-opponent">
-                            ${oppCardsHTML}
-                        </div>
-                    </div>
-
-                    <div class="center-board">
-                        <div class="deck-stack" onclick="window.handleDrawDeck()">
-                            <div class="uno-card uno-card-back">
-                                <div class="oval-back"><span class="uno-logo-text">UNO</span></div>
-                            </div>
-                        </div>
-
-                        <div class="discard-stack">
-                            ${topCard ? renderCardHTML(topCard) : ''}
-                        </div>
-
-                        <button class="uno-btn-real ${unoBtnActive ? 'active-uno' : ''}" onclick="window.handleUnoButtonClick()">
-                            UNO!
-                        </button>
-
-                        <div class="color-indicator" style="border-color: ${colorBg[currentColor] || '#fff'}">
-                            Cor: <span style="color:${colorBg[currentColor] || '#fff'}">${colorNames[currentColor] || currentColor}</span>
-                        </div>
-                    </div>
-
-                    <div class="player-area">
-                        ${myHand.length === 1 ? '<div class="uno-badge">1 CARTA!</div>' : ''}
-                        <div class="hand-scroll-container">
-                            <div class="hand-player">
-                                ${myCardsHTML}
-                            </div>
-                        </div>
-                    </div>
-
-                    ${selectingWildCardIndex !== null ? `
-                        <div class="color-picker-modal">
-                            <div class="color-picker-title">Escolha uma Cor</div>
-                            <div class="color-picker-grid">
-                                <div class="color-btn red" onclick="window.selectWildColor('red')"></div>
-                                <div class="color-btn blue" onclick="window.selectWildColor('blue')"></div>
-                                <div class="color-btn green" onclick="window.selectWildColor('green')"></div>
-                                <div class="color-btn yellow" onclick="window.selectWildColor('yellow')"></div>
-                            </div>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-        }
-    </script>
+    window.onload = initPeer;
+  </script>
 </body>
 </html>
