@@ -1,833 +1,332 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Private Stream - Deluxe Edition</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#050507">
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
-      height: 100dvh;
-      background-color: #050507;
-      color: #e3e3e3;
-      overflow: hidden;
-    }
-
-    .app-viewport {
-      width: 100%;
-      height: 100%;
-      height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      background-color: #050507;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .media-panel {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      background-color: #000;
-      position: relative;
-      min-height: 0;
-      width: 100%;
-    }
-
-    .stage {
-      flex: 1;
-      background-color: #000;
-      position: relative;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      min-height: 0;
-      background: radial-gradient(circle at center, #0f1015 0%, #000 100%);
-    }
-
-    video {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      background-color: #000;
-    }
-
-    .stage-placeholder {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 14px;
-      color: #5a5e65;
-      padding: 20px;
-      text-align: center;
-    }
-
-    .stage-placeholder svg {
-      width: 64px;
-      height: 64px;
-      fill: #ff4500;
-      filter: drop-shadow(0 0 12px rgba(255, 69, 0, 0.6));
-    }
-
-    .deluxe-badge {
-      font-size: 10px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: #ffd700;
-      border: 1px solid rgba(255, 215, 0, 0.4);
-      padding: 2px 8px;
-      border-radius: 12px;
-      background: rgba(255, 215, 0, 0.05);
-    }
-
-    .author-tag {
-      text-align: center;
-      font-size: 11px;
-      font-weight: 700;
-      color: #ff5722;
-      letter-spacing: 0.5px;
-      padding: 6px 0;
-      background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(18,19,22,1) 100%);
-      border-top: 1px solid rgba(255, 69, 0, 0.15);
-      flex-shrink: 0;
-      text-transform: none;
-    }
-
-    .controls-dock {
-      height: 64px;
-      height: calc(64px + env(safe-area-inset-bottom, 0px));
-      padding-bottom: env(safe-area-inset-bottom, 0px);
-      display: flex;
-      align-items: center;
-      justify-content: space-evenly;
-      padding-left: max(8px, env(safe-area-inset-left));
-      padding-right: max(8px, env(safe-area-inset-right));
-      background-color: #0d0e11;
-      border-top: 1px solid rgba(255, 69, 0, 0.3);
-      flex-shrink: 0;
-      box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
-    }
-
-    .dock-btn {
-      background-color: #16181d;
-      color: #dbdee1;
-      border: 1px solid rgba(255, 69, 0, 0.25);
-      height: 42px;
-      padding: 0 14px;
-      border-radius: 21px;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s ease-in-out;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-    }
-
-    .dock-btn:active {
-      transform: scale(0.92);
-    }
-
-    .dock-btn.active {
-      background: linear-gradient(135deg, #ff4500, #ff6a00);
-      color: #fff;
-      border-color: #ff6a00;
-      box-shadow: 0 0 16px rgba(255, 69, 0, 0.6);
-    }
-
-    .dock-btn.danger {
-      background-color: #2a1215;
-      color: #ff4d4d;
-      border-color: rgba(255, 77, 77, 0.4);
-    }
-
-    .dock-btn.danger:active {
-      background-color: #ff4d4d;
-      color: #fff;
-    }
-
-    .chat-drawer {
-      position: absolute;
-      top: 0;
-      right: -100%;
-      width: 100%;
-      height: 100%;
-      background-color: #0d0e11;
-      display: flex;
-      flex-direction: column;
-      transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      z-index: 50;
-    }
-
-    .chat-drawer.open {
-      right: 0;
-    }
-
-    .chat-header {
-      height: 54px;
-      padding: 0 16px;
-      padding-top: env(safe-area-inset-top, 0px);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid rgba(255, 69, 0, 0.25);
-      background-color: #121418;
-      flex-shrink: 0;
-    }
-
-    .chat-title {
-      font-size: 14px;
-      font-weight: 800;
-      color: #ff4500;
-      letter-spacing: 0.5px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      background-color: #444;
-      border-radius: 50%;
-      display: inline-block;
-    }
-
-    .status-dot.online {
-      background-color: #00ff66;
-      box-shadow: 0 0 8px #00ff66;
-    }
-
-    .close-chat-btn {
-      background: none;
-      border: none;
-      color: #8a8d93;
-      font-size: 26px;
-      cursor: pointer;
-      padding: 4px 8px;
-      line-height: 1;
-    }
-
-    .chat-messages {
-      flex: 1;
-      padding: 14px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      background-color: #060608;
-    }
-
-    .msg-group {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      max-width: 85%;
-    }
-
-    .msg-group.self {
-      align-self: flex-end;
-      align-items: flex-end;
-    }
-
-    .msg-group.peer {
-      align-self: flex-start;
-      align-items: flex-start;
-    }
-
-    .msg-bubble {
-      padding: 9px 13px;
-      border-radius: 16px;
-      font-size: 13px;
-      line-height: 1.4;
-      word-break: break-word;
-      user-select: text;
-    }
-
-    .msg-group.self .msg-bubble {
-      background: linear-gradient(135deg, #ff4500, #c02800);
-      color: #fff;
-      border-bottom-right-radius: 2px;
-      box-shadow: 0 2px 8px rgba(255, 69, 0, 0.3);
-    }
-
-    .msg-group.peer .msg-bubble {
-      background-color: #181a20;
-      color: #e0e0e0;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-bottom-left-radius: 2px;
-    }
-
-    .msg-sys {
-      align-self: center;
-      font-size: 10px;
-      font-weight: 600;
-      color: #ff8555;
-      background-color: rgba(255, 69, 0, 0.12);
-      border: 1px solid rgba(255, 69, 0, 0.25);
-      padding: 4px 12px;
-      border-radius: 12px;
-      margin: 4px 0;
-      text-align: center;
-      letter-spacing: 0.5px;
-    }
-
-    .chat-input-container {
-      padding: 12px;
-      padding-bottom: max(12px, env(safe-area-inset-bottom));
-      background-color: #121418;
-      border-top: 1px solid rgba(255, 69, 0, 0.2);
-      flex-shrink: 0;
-    }
-
-    .input-box {
-      background-color: #060608;
-      border: 1px solid rgba(255, 69, 0, 0.4);
-      border-radius: 22px;
-      padding: 6px 14px;
-      display: flex;
-      align-items: center;
-      transition: border-color 0.2s;
-    }
-
-    .input-box:focus-within {
-      border-color: #ff4500;
-      box-shadow: 0 0 8px rgba(255, 69, 0, 0.4);
-    }
-
-    textarea {
-      flex: 1;
-      background: none;
-      border: none;
-      outline: none;
-      color: #fff;
-      font-size: 13px;
-      resize: none;
-      height: 26px;
-      line-height: 26px;
-      user-select: text;
-    }
-
-    .overlay-connect {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(5, 5, 7, 0.96);
-      backdrop-filter: blur(12px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      padding: 16px;
-      transition: opacity 0.3s, visibility 0.3s;
-    }
-
-    .overlay-connect.hidden {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
-
-    .connect-card {
-      background-color: #101216;
-      border: 1px solid rgba(255, 69, 0, 0.35);
-      padding: 28px 24px;
-      border-radius: 20px;
-      width: 100%;
-      max-width: 380px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      box-shadow: 0 15px 35px rgba(0,0,0,0.95), 0 0 20px rgba(255, 69, 0, 0.2);
-      text-align: center;
-    }
-
-    .connect-card h2 {
-      color: #ff4500;
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .id-box {
-      background-color: #060608;
-      border: 1px dashed rgba(255, 69, 0, 0.5);
-      padding: 12px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .id-code {
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 18px;
-      font-weight: 700;
-      color: #fff;
-      letter-spacing: 3px;
-    }
-
-    .btn-action {
-      background: linear-gradient(135deg, #ff4500, #c02800);
-      color: #fff;
-      border: none;
-      padding: 9px 16px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 800;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-action:active {
-      transform: scale(0.95);
-    }
-
-    .connect-input-group {
-      display: flex;
-      gap: 8px;
-    }
-
-    .connect-input-group input {
-      flex: 1;
-      background-color: #060608;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 8px;
-      padding: 10px;
-      color: #fff;
-      font-size: 14px;
-      outline: none;
-      text-align: center;
-      letter-spacing: 2px;
-      font-family: 'Courier New', Courier, monospace;
-      transition: border-color 0.2s;
-    }
-
-    .connect-input-group input:focus {
-      border-color: #ff4500;
-    }
-
-    .video-overlay-controls {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      display: flex;
-      gap: 8px;
-      z-index: 10;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-
-    .stage:hover .video-overlay-controls,
-    .stage:active .video-overlay-controls {
-      opacity: 1;
-    }
-
-    .icon-btn {
-      background-color: rgba(0, 0, 0, 0.65);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #fff;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 14px;
-      backdrop-filter: blur(4px);
-    }
-
-    @media (min-width: 768px) {
-      .chat-drawer {
-        width: 360px;
-        right: -360px;
-        border-left: 1px solid rgba(255, 69, 0, 0.25);
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravador de Tela</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .pulse-red {
+            animation: pulse-animation 1.5s infinite;
+        }
+        @keyframes pulse-animation {
+            0% {
+                box-shadow: 0 0 0 0px rgba(239, 68, 68, 0.7);
+            }
+            100% {
+                box-shadow: 0 0 0 12px rgba(239, 68, 68, 0);
+            }
+        }
+    </style>
 </head>
-<body>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between">
 
-  <div class="app-viewport">
-    <div class="overlay-connect" id="connectOverlay">
-      <div class="connect-card">
-        <h2>
-          <span>Conexão Privada</span>
-          <span class="deluxe-badge">Deluxe</span>
-        </h2>
-        
-        <div>
-          <span style="font-size: 11px; color: #8a8d93; display: block; margin-bottom: 6px; text-transform: uppercase; font-weight: 700;">Seu Código:</span>
-          <div class="id-box">
-            <span class="id-code" id="myCodeDisplay">------</span>
-            <button class="btn-action" id="btnCopyCode">Copiar</button>
-          </div>
+    <header class="border-b border-slate-800 bg-slate-900/50 backdrop-blur px-6 py-4">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-indigo-600/20 text-indigo-400 rounded-xl border border-indigo-500/30">
+                    <i class="fa-solid fa-video text-xl"></i>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+                    ScreenRecorder Pro
+                </h1>
+            </div>
+            <div id="statusBadge" class="flex items-center space-x-2 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700/50 text-xs font-medium text-slate-400">
+                <span id="statusDot" class="w-2 h-2 rounded-full bg-slate-500"></span>
+                <span id="statusText">Pronto para gravar</span>
+            </div>
         </div>
+    </header>
 
-        <div>
-          <span style="font-size: 11px; color: #8a8d93; display: block; margin-bottom: 6px; text-transform: uppercase; font-weight: 700;">Conectar Ao Parceiro:</span>
-          <div class="connect-input-group">
-            <input type="text" id="friendCodeInput" placeholder="000000" maxlength="6">
-            <button class="btn-action" id="btnConnect">Conectar</button>
-          </div>
+    <main class="max-w-6xl mx-auto px-4 py-8 w-full flex-grow flex flex-col justify-center">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <div class="lg:col-span-8 flex flex-col gap-4">
+                <div class="relative bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl aspect-video flex items-center justify-center group">
+                    <video id="livePreview" autoplay muted class="w-full h-full object-contain hidden"></video>
+                    <video id="recordedPreview" controls class="w-full h-full object-contain hidden"></video>
+                    
+                    <div id="placeholderState" class="flex flex-col items-center justify-center text-center p-6">
+                        <div class="w-16 h-16 bg-slate-800/80 rounded-2xl flex items-center justify-center text-slate-500 mb-4 border border-slate-700/50">
+                            <i class="fa-solid fa-desktop text-2xl"></i>
+                        </div>
+                        <p class="text-slate-300 font-medium text-lg">Nenhuma gravação ativa</p>
+                        <p class="text-slate-500 text-sm max-w-sm mt-1">Clique no botão abaixo para selecionar a tela ou janela que deseja gravar.</p>
+                    </div>
+
+                    <div id="recordingOverlay" class="absolute top-4 left-4 bg-slate-950/80 backdrop-blur border border-slate-800 px-3 py-1.5 rounded-lg flex items-center gap-2 hidden">
+                        <span id="liveDot" class="w-2.5 h-2.5 rounded-full bg-red-500 pulse-red"></span>
+                        <span id="timerDisplay" class="font-mono text-sm font-semibold tracking-wider text-slate-200">00:00:00</span>
+                    </div>
+                </div>
+
+                <div id="alertBox" class="hidden p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm flex items-center gap-3">
+                    <i class="fa-solid fa-circle-exclamation text-lg flex-shrink-0"></i>
+                    <span id="alertText">Ocorreu um erro ao tentar gravar a tela.</span>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between gap-6">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-200 mb-1">Controles de Gravação</h2>
+                    <p class="text-slate-400 text-xs mb-6">Configure suas opções e inicie a captura de vídeo.</p>
+
+                    <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800/80 mb-6">
+                        <label class="flex items-center justify-between cursor-pointer">
+                            <span class="flex items-center gap-3 text-sm font-medium text-slate-300">
+                                <i class="fa-solid fa-microphone text-indigo-400"></i>
+                                Incluir Áudio do Microfone
+                            </span>
+                            <div class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="audioToggle" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="space-y-3">
+                        <button id="btnStart" class="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-medium rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20">
+                            <i class="fa-solid fa-circle text-red-400 text-xs"></i>
+                            Iniciar Gravação
+                        </button>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <button id="btnPause" disabled class="py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed border border-slate-700/50">
+                                <i class="fa-solid fa-pause"></i>
+                                Pausar
+                            </button>
+                            <button id="btnStop" disabled class="py-3 px-4 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 font-medium rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+                                <i class="fa-solid fa-square"></i>
+                                Parar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-800 pt-6">
+                    <button id="btnDownload" disabled class="w-full py-3.5 px-4 bg-slate-800 text-slate-500 font-medium rounded-xl border border-slate-800 transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-download"></i>
+                        Baixar Gravação (.webm)
+                    </button>
+                </div>
+            </div>
+
         </div>
-      </div>
-    </div>
+    </main>
 
-    <div class="media-panel">
-      <div class="stage" id="stageContainer">
-        <div class="video-overlay-controls">
-          <button class="icon-btn" id="btnMuteRemote" title="Mutar Som Recebido">🔊</button>
-        </div>
+    <footer class="border-t border-slate-800 bg-slate-900/30 py-4 px-6 text-center text-xs text-slate-500">
+        Gravador de Tela HTML5 • Desenvolvido com MediaRecorder API
+    </footer>
 
-        <div class="stage-placeholder" id="placeholder">
-          <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
-          <span style="font-weight: 600;">Transmissão em Alta Definição</span>
-          <span class="deluxe-badge" id="statusBadge">Aguardando Conexão...</span>
-        </div>
-        <video id="remoteVideo" autoplay playsinline style="display:none;"></video>
-      </div>
+    <script>
+        let mediaRecorder;
+        let recordedChunks = [];
+        let stream;
+        let timerInterval;
+        let secondsElapsed = 0;
+        let recordedBlob;
 
-      <div class="author-tag">Made By: @085_Teuzinnn</div>
+        const btnStart = document.getElementById('btnStart');
+        const btnPause = document.getElementById('btnPause');
+        const btnStop = document.getElementById('btnStop');
+        const btnDownload = document.getElementById('btnDownload');
+        const audioToggle = document.getElementById('audioToggle');
 
-      <div class="controls-dock">
-        <button class="dock-btn" id="btnMic">🎙️ Áudio</button>
-        <button class="dock-btn" id="btnScreen">🖥️ Tela 4K</button>
-        <button class="dock-btn" id="btnFullscreen">⛶ Full</button>
-        <button class="dock-btn" id="btnToggleChat">💬 Chat</button>
-        <button class="dock-btn danger" id="btnHangup">🚪 Sair</button>
-      </div>
-    </div>
+        const livePreview = document.getElementById('livePreview');
+        const recordedPreview = document.getElementById('recordedPreview');
+        const placeholderState = document.getElementById('placeholderState');
+        const recordingOverlay = document.getElementById('recordingOverlay');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const liveDot = document.getElementById('liveDot');
 
-    <div class="chat-drawer" id="chatDrawer">
-      <div class="chat-header">
-        <span class="chat-title">
-          <span class="status-dot" id="statusDot"></span>
-          Chat Privado HQ
-        </span>
-        <button class="close-chat-btn" id="btnCloseChat">×</button>
-      </div>
+        const statusBadge = document.getElementById('statusBadge');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const alertBox = document.getElementById('alertBox');
+        const alertText = document.getElementById('alertText');
 
-      <div class="chat-messages" id="chatMessages">
-        <div class="msg-sys">SISTEMA P2P ENCRIPTADO PRONTO.</div>
-      </div>
-
-      <div class="chat-input-container">
-        <div class="input-box">
-          <textarea id="msgInput" placeholder="Digite uma mensagem..."></textarea>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <audio id="remoteAudio" autoplay></audio>
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
-    }
-
-    let peer = null;
-    let dataConn = null;
-    let mediaConn = null;
-    let localStream = null;
-    let screenStream = null;
-    let micEnabled = false;
-    let isRemoteMuted = false;
-
-    const myCodeDisplay = document.getElementById('myCodeDisplay');
-    const friendCodeInput = document.getElementById('friendCodeInput');
-    const btnCopyCode = document.getElementById('btnCopyCode');
-    const btnConnect = document.getElementById('btnConnect');
-    const connectOverlay = document.getElementById('connectOverlay');
-    
-    const chatDrawer = document.getElementById('chatDrawer');
-    const btnToggleChat = document.getElementById('btnToggleChat');
-    const btnCloseChat = document.getElementById('btnCloseChat');
-    const chatMessages = document.getElementById('chatMessages');
-    const msgInput = document.getElementById('msgInput');
-    const statusDot = document.getElementById('statusDot');
-    
-    const stageContainer = document.getElementById('stageContainer');
-    const remoteVideo = document.getElementById('remoteVideo');
-    const remoteAudio = document.getElementById('remoteAudio');
-    const placeholder = document.getElementById('placeholder');
-    const statusBadge = document.getElementById('statusBadge');
-    const btnMuteRemote = document.getElementById('btnMuteRemote');
-    
-    const btnMic = document.getElementById('btnMic');
-    const btnScreen = document.getElementById('btnScreen');
-    const btnFullscreen = document.getElementById('btnFullscreen');
-    const btnHangup = document.getElementById('btnHangup');
-
-    function generateShortId() {
-      return Math.floor(100000 + Math.random() * 900000).toString();
-    }
-
-    function initPeer() {
-      const customId = generateShortId();
-      peer = new Peer(customId, {
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' }
-          ]
+        function updateTimer() {
+            secondsElapsed++;
+            const hrs = String(Math.floor(secondsElapsed / 3600)).padStart(2, '0');
+            const mins = String(Math.floor((secondsElapsed % 3600) / 60)).padStart(2, '0');
+            const secs = String(secondsElapsed % 60).padStart(2, '0');
+            timerDisplay.textContent = `${hrs}:${mins}:${secs}`;
         }
-      });
 
-      peer.on('open', (id) => {
-        myCodeDisplay.textContent = id;
-      });
-
-      peer.on('connection', (conn) => {
-        setupDataConnection(conn);
-      });
-
-      peer.on('call', async (call) => {
-        mediaConn = call;
-        call.answer(localStream);
-        setupMediaCall(call);
-      });
-
-      peer.on('error', (err) => {
-        addSystemMessage(`ERRO: ${err.type.toUpperCase()}`);
-      });
-    }
-
-    btnCopyCode.onclick = () => {
-      navigator.clipboard.writeText(myCodeDisplay.textContent);
-      btnCopyCode.textContent = 'Copiado!';
-      setTimeout(() => btnCopyCode.textContent = 'Copiar', 2000);
-    };
-
-    btnConnect.onclick = () => {
-      const code = friendCodeInput.value.trim();
-      if (code.length !== 6) return;
-      
-      const conn = peer.connect(code, { reliable: true });
-      setupDataConnection(conn);
-    };
-
-    function setupDataConnection(conn) {
-      dataConn = conn;
-
-      dataConn.on('open', () => {
-        connectOverlay.classList.add('hidden');
-        statusDot.classList.add('online');
-        if (statusBadge) statusBadge.style.display = 'none';
-        addSystemMessage('CONEXÃO ULTRA HQ ESTABELECIDA');
-      });
-
-      dataConn.on('data', (data) => {
-        if (data.type === 'chat') {
-          addMessage(data.text, 'peer');
+        function resetTimer() {
+            clearInterval(timerInterval);
+            secondsElapsed = 0;
+            timerDisplay.textContent = '00:00:00';
         }
-      });
 
-      dataConn.on('close', () => {
-        connectOverlay.classList.remove('hidden');
-        statusDot.classList.remove('online');
-        if (statusBadge) statusBadge.style.display = 'inline-block';
-        addSystemMessage('CONEXÃO ENCERRADA');
-        resetMediaState();
-      });
-    }
-
-    function setupMediaCall(call) {
-      call.on('stream', (remoteStream) => {
-        const hasVideo = remoteStream.getVideoTracks().length > 0;
-        if (hasVideo) {
-          remoteVideo.srcObject = remoteStream;
-          remoteVideo.style.display = 'block';
-          placeholder.style.display = 'none';
-        } else {
-          remoteAudio.srcObject = remoteStream;
+        function setStatus(state) {
+            if (state === 'recording') {
+                statusDot.className = 'w-2 h-2 rounded-full bg-red-500 pulse-red';
+                statusText.textContent = 'Gravando';
+                statusText.className = 'text-red-400 font-medium';
+            } else if (state === 'paused') {
+                statusDot.className = 'w-2 h-2 rounded-full bg-amber-500';
+                statusText.textContent = 'Pausado';
+                statusText.className = 'text-amber-400 font-medium';
+            } else if (state === 'stopped') {
+                statusDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+                statusText.textContent = 'Concluído';
+                statusText.className = 'text-emerald-400 font-medium';
+            } else {
+                statusDot.className = 'w-2 h-2 rounded-full bg-slate-500';
+                statusText.textContent = 'Pronto para gravar';
+                statusText.className = 'text-slate-400';
+            }
         }
-      });
 
-      call.on('close', () => {
-        resetMediaState();
-      });
-    }
-
-    function resetMediaState() {
-      remoteVideo.style.display = 'none';
-      placeholder.style.display = 'flex';
-      if (statusBadge) statusBadge.style.display = 'inline-block';
-      remoteVideo.srcObject = null;
-      remoteAudio.srcObject = null;
-    }
-
-    btnMuteRemote.onclick = () => {
-      isRemoteMuted = !isRemoteMuted;
-      remoteVideo.muted = isRemoteMuted;
-      remoteAudio.muted = isRemoteMuted;
-      btnMuteRemote.textContent = isRemoteMuted ? '🔇' : '🔊';
-    };
-
-    btnToggleChat.onclick = () => {
-      chatDrawer.classList.toggle('open');
-      btnToggleChat.classList.toggle('active');
-    };
-
-    btnCloseChat.onclick = () => {
-      chatDrawer.classList.remove('open');
-      btnToggleChat.classList.remove('active');
-    };
-
-    msgInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
-    });
-
-    function sendMessage() {
-      const text = msgInput.value.trim();
-      if (!text) return;
-
-      if (dataConn && dataConn.open) {
-        dataConn.send({ type: 'chat', text: text });
-        addMessage(text, 'self');
-        msgInput.value = '';
-      }
-    }
-
-    function addMessage(text, side) {
-      const group = document.createElement('div');
-      group.className = `msg-group ${side}`;
-      
-      const bubble = document.createElement('div');
-      bubble.className = 'msg-bubble';
-      bubble.textContent = text;
-      
-      group.appendChild(bubble);
-      chatMessages.appendChild(group);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    function addSystemMessage(text) {
-      const sys = document.createElement('div');
-      sys.className = `msg-sys`;
-      sys.textContent = text;
-      chatMessages.appendChild(sys);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    btnMic.onclick = async () => {
-      if (!micEnabled) {
-        try {
-          localStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true
-            },
-            video: false
-          });
-          micEnabled = true;
-          btnMic.classList.add('active');
-          
-          if (dataConn && dataConn.peer) {
-            mediaConn = peer.call(dataConn.peer, localStream);
-            setupMediaCall(mediaConn);
-          }
-        } catch (err) {
-          addSystemMessage('FALHA AO ACESSAR MICROFONE');
+        function showAlert(message) {
+            alertText.textContent = message;
+            alertBox.classList.remove('hidden');
         }
-      } else {
-        if (localStream) {
-          localStream.getTracks().forEach(track => track.stop());
-        }
-        micEnabled = false;
-        btnMic.classList.remove('active');
-      }
-    };
 
-    btnScreen.onclick = async () => {
-      try {
-        screenStream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            width: { ideal: 3840, max: 3840 },
-            height: { ideal: 2160, max: 2160 },
-            frameRate: { ideal: 60, max: 60 },
-            displaySurface: 'monitor'
-          },
-          audio: {
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false
-          }
+        function hideAlert() {
+            alertBox.classList.add('hidden');
+        }
+
+        btnStart.addEventListener('click', async () => {
+            hideAlert();
+            recordedChunks = [];
+
+            try {
+                const displayStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { frameRate: { ideal: 30 } },
+                    audio: true
+                });
+
+                let tracks = [...displayStream.getTracks()];
+
+                if (audioToggle.checked) {
+                    try {
+                        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        const micTrack = micStream.getAudioTracks()[0];
+                        tracks.push(micTrack);
+                    } catch (micErr) {
+                        showAlert("Não foi possível acessar o microfone, mas a gravação continuará sem ele.");
+                    }
+                }
+
+                stream = new MediaStream(tracks);
+
+                livePreview.srcObject = stream;
+                livePreview.classList.remove('hidden');
+                recordedPreview.classList.add('hidden');
+                placeholderState.classList.add('hidden');
+                recordingOverlay.classList.remove('hidden');
+
+                let options = { mimeType: 'video/webm;codecs=vp9,opus' };
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                    options = { mimeType: 'video/webm;codecs=vp8,opus' };
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        options = { mimeType: 'video/webm' };
+                    }
+                }
+
+                mediaRecorder = new MediaRecorder(stream, options);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data && event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    resetTimer();
+                    recordingOverlay.classList.add('hidden');
+                    livePreview.classList.add('hidden');
+
+                    recordedBlob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const videoURL = URL.createObjectURL(recordedBlob);
+                    recordedPreview.src = videoURL;
+                    recordedPreview.classList.remove('hidden');
+
+                    btnStart.disabled = false;
+                    btnPause.disabled = true;
+                    btnStop.disabled = true;
+                    btnDownload.disabled = false;
+                    btnDownload.className = "w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-medium rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20";
+                    btnPause.innerHTML = '<i class="fa-solid fa-pause"></i> Pausar';
+
+                    setStatus('stopped');
+
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                displayStream.getVideoTracks()[0].onended = () => {
+                    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                        mediaRecorder.stop();
+                    }
+                };
+
+                mediaRecorder.start(1000);
+
+                resetTimer();
+                timerInterval = setInterval(updateTimer, 1000);
+
+                btnStart.disabled = true;
+                btnPause.disabled = false;
+                btnStop.disabled = false;
+                btnDownload.disabled = true;
+                btnDownload.className = "w-full py-3.5 px-4 bg-slate-800 text-slate-500 font-medium rounded-xl border border-slate-800 transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed";
+
+                setStatus('recording');
+
+            } catch (err) {
+                if (err.name !== 'NotAllowedError') {
+                    showAlert("Erro ao iniciar a gravação: " + err.message);
+                }
+            }
         });
-        
-        if (dataConn && dataConn.peer) {
-          mediaConn = peer.call(dataConn.peer, screenStream);
-          setupMediaCall(mediaConn);
-        }
 
-        btnScreen.classList.add('active');
+        btnPause.addEventListener('click', () => {
+            if (!mediaRecorder) return;
 
-        screenStream.getVideoTracks()[0].onended = () => {
-          btnScreen.classList.remove('active');
-        };
-      } catch (err) {
-        addSystemMessage('COMPARTILHAMENTO CANCELADO');
-      }
-    };
+            if (mediaRecorder.state === 'recording') {
+                mediaRecorder.pause();
+                clearInterval(timerInterval);
+                btnPause.innerHTML = '<i class="fa-solid fa-play"></i> Retomar';
+                liveDot.classList.remove('pulse-red');
+                liveDot.classList.replace('bg-red-500', 'bg-amber-500');
+                setStatus('paused');
+            } else if (mediaRecorder.state === 'paused') {
+                mediaRecorder.resume();
+                timerInterval = setInterval(updateTimer, 1000);
+                btnPause.innerHTML = '<i class="fa-solid fa-pause"></i> Pausar';
+                liveDot.classList.replace('bg-amber-500', 'bg-red-500');
+                liveDot.classList.add('pulse-red');
+                setStatus('recording');
+            }
+        });
 
-    btnFullscreen.onclick = () => {
-      if (!document.fullscreenElement) {
-        if (stageContainer.requestFullscreen) {
-          stageContainer.requestFullscreen();
-        } else if (stageContainer.webkitRequestFullscreen) {
-          stageContainer.webkitRequestFullscreen();
-        }
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        }
-      }
-    };
+        btnStop.addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+        });
 
-    btnHangup.onclick = () => {
-      if (dataConn) dataConn.close();
-      if (mediaConn) mediaConn.close();
-      if (localStream) localStream.getTracks().forEach(t => t.stop());
-      if (screenStream) screenStream.getTracks().forEach(t => t.stop());
-      
-      resetMediaState();
-      btnMic.classList.remove('active');
-      btnScreen.classList.remove('active');
-      statusDot.classList.remove('online');
-      connectOverlay.classList.remove('hidden');
-    };
-
-    window.onload = initPeer;
-  </script>
+        btnDownload.addEventListener('click', () => {
+            if (!recordedBlob) return;
+            const url = URL.createObjectURL(recordedBlob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `gravacao-tela-${new Date().toISOString().slice(0, 10)}_${Date.now()}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+        });
+    </script>
 </body>
 </html>
